@@ -1,9 +1,11 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { TEMPLATES } from "@/components/templates";
-import { Search, Printer, Check, Clock, Loader2 } from "lucide-react";
+import { Search, Printer, Check, Clock, Loader2, PenLine } from "lucide-react";
 
 type Pedido = {
   id: string;
@@ -16,15 +18,42 @@ type Pedido = {
   template_id: string;
   telefono_padre: string;
   cantidad: number;
+  lapices_hojas: number;
   estado: string;
   created_at: string;
 };
+
+// Genera una página 50×25mm con 6 tiras de lápiz para el nombre dado
+function generarPaginaLapiz(nombre: string, apellido: string): string {
+  const nombreCompleto = `${nombre} ${apellido}`.toUpperCase();
+  // 6 tiras de ~66.7px de ancho en SVG 400×200
+  const tiras = Array.from({ length: 6 }, (_, i) => {
+    const x = i * 66.7 + 33.3; // centro de cada tira
+    return `
+      <line x1="${i * 66.7}" y1="0" x2="${i * 66.7}" y2="200"
+        stroke="black" stroke-width="1" stroke-dasharray="6 4" opacity="0.5"/>
+      <text x="${x}" y="100"
+        font-size="22" font-weight="900" font-family="Arial Black, Arial, sans-serif"
+        fill="black" text-anchor="middle" dominant-baseline="middle"
+        transform="rotate(-90, ${x}, 100)">
+        ${nombreCompleto}
+      </text>`;
+  }).join("");
+
+  return `<svg width="400" height="200" viewBox="0 0 400 200"
+    xmlns="http://www.w3.org/2000/svg">
+    <rect width="400" height="200" fill="white"/>
+    ${tiras}
+    <line x1="399" y1="0" x2="399" y2="200" stroke="black" stroke-width="1" stroke-dasharray="6 4" opacity="0.5"/>
+  </svg>`;
+}
 
 export default function CajeroPage() {
   const [codigo, setCodigo] = useState("");
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [buscando, setBuscando] = useState(false);
   const [imprimiendo, setImprimiendo] = useState(false);
+  const [imprimiendoLapices, setImprimiendoLapices] = useState(false);
   const [error, setError] = useState("");
   const [exito, setExito] = useState(false);
 
@@ -57,7 +86,6 @@ export default function CajeroPage() {
     if (!pedido || !template) return;
     setImprimiendo(true);
 
-    // Abrir ventana de impresión con la etiqueta optimizada para TSC TE200
     const win = window.open("", "_blank", "width=800,height=600");
     if (!win) { setImprimiendo(false); return; }
 
@@ -70,44 +98,64 @@ export default function CajeroPage() {
       whatsapp: pedido.telefono_padre || "593999999999",
     };
 
-    // Generar SVG como string
     const { renderToStaticMarkup } = await import("react-dom/server");
     const svgString = renderToStaticMarkup(<Comp {...datos}/>);
 
-    // 1 etiqueta por página — TSC TE200 maneja el roll de 50×25mm
     const paginas = Array.from({ length: pedido.cantidad }, () =>
       `<div class="pag">${svgString}</div>`
     ).join("");
 
     win.document.write(`<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8"/>
+<html><head><meta charset="UTF-8"/>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   @page { size: 50mm 25mm; margin: 0; }
   html, body { width: 50mm; height: 25mm; background: white; }
   .pag { width: 50mm; height: 25mm; overflow: hidden; page-break-after: always; }
   svg { width: 50mm !important; height: 25mm !important; display: block; }
-</style>
-</head>
-<body>
+</style></head><body>
 ${paginas}
 <script>window.onload = () => { window.print(); window.close(); }<\/script>
-</body>
-</html>`);
+</body></html>`);
     win.document.close();
 
-    // Marcar como impreso
-    await supabase
-      .from("etiquetas_pedidos")
-      .update({ estado: "impreso" })
-      .eq("id", pedido.id);
-
+    await supabase.from("etiquetas_pedidos").update({ estado: "impreso" }).eq("id", pedido.id);
     setPedido(prev => prev ? { ...prev, estado: "impreso" } : prev);
     setExito(true);
     setImprimiendo(false);
   }
+
+  async function imprimirLapices() {
+    if (!pedido) return;
+    setImprimiendoLapices(true);
+
+    const win = window.open("", "_blank", "width=800,height=600");
+    if (!win) { setImprimiendoLapices(false); return; }
+
+    const svgLapiz = generarPaginaLapiz(pedido.nombre, pedido.apellido);
+    const hojas = pedido.lapices_hojas || 1;
+
+    const paginas = Array.from({ length: hojas }, () =>
+      `<div class="pag">${svgLapiz}</div>`
+    ).join("");
+
+    win.document.write(`<!DOCTYPE html>
+<html><head><meta charset="UTF-8"/>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  @page { size: 50mm 25mm; margin: 0; }
+  html, body { width: 50mm; height: 25mm; background: white; }
+  .pag { width: 50mm; height: 25mm; overflow: hidden; page-break-after: always; }
+  svg { width: 50mm !important; height: 25mm !important; display: block; }
+</style></head><body>
+${paginas}
+<script>window.onload = () => { window.print(); window.close(); }<\/script>
+</body></html>`);
+    win.document.close();
+    setImprimiendoLapices(false);
+  }
+
+  const lapicesHojas = pedido?.lapices_hojas ?? 0;
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white p-6">
@@ -121,7 +169,6 @@ ${paginas}
         </div>
       </header>
 
-      {/* Buscador */}
       <div className="max-w-sm mx-auto space-y-6">
         <div>
           <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Código del cliente</label>
@@ -142,7 +189,6 @@ ${paginas}
           {error && <p className="text-red-400 text-xs font-bold mt-2">{error}</p>}
         </div>
 
-        {/* Pedido encontrado */}
         {pedido && template && (
           <div className="space-y-4">
             {/* Estado */}
@@ -152,7 +198,7 @@ ${paginas}
               {pedido.estado === "impreso" ? "Ya fue impreso" : "Pendiente de impresión"}
             </div>
 
-            {/* Preview etiqueta */}
+            {/* Preview */}
             <div className="bg-white rounded-2xl overflow-hidden">
               <template.componente
                 nombre={pedido.nombre}
@@ -170,7 +216,8 @@ ${paginas}
                 ["Institución", pedido.unidad_educativa],
                 ["Grado",       pedido.grado],
                 ["Modelo",      template.nombre],
-                ["Cantidad",    `${pedido.cantidad} etiquetas`],
+                ["Etiquetas",   `${pedido.cantidad} escolares`],
+                ...(lapicesHojas > 0 ? [["Lápices", `${lapicesHojas} hoja${lapicesHojas > 1 ? "s" : ""} · ${lapicesHojas * 6} etiquetas`]] : []),
               ].map(([k,v]) => (
                 <div key={k} className="flex justify-between">
                   <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{k}</span>
@@ -185,11 +232,21 @@ ${paginas}
               </div>
             )}
 
+            {/* Botón etiquetas escolares */}
             <button onClick={imprimir} disabled={imprimiendo}
               className="w-full bg-yellow-400 text-black py-4 rounded-2xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-40 border-2 border-yellow-500 shadow-[4px_4px_0px_rgba(255,215,0,0.3)]">
               {imprimiendo ? <Loader2 size={18} className="animate-spin"/> : <Printer size={18}/>}
               {imprimiendo ? "Preparando..." : `Imprimir ${pedido.cantidad} etiquetas`}
             </button>
+
+            {/* Botón etiquetas de lápices */}
+            {lapicesHojas > 0 && (
+              <button onClick={imprimirLapices} disabled={imprimiendoLapices}
+                className="w-full bg-zinc-800 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-40 border-2 border-zinc-600">
+                {imprimiendoLapices ? <Loader2 size={18} className="animate-spin"/> : <PenLine size={18}/>}
+                {imprimiendoLapices ? "Preparando..." : `Imprimir ${lapicesHojas * 6} etiquetas de lápiz`}
+              </button>
+            )}
           </div>
         )}
       </div>

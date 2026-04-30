@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS etiquetas_pedidos (
   template_id      varchar(50)  NOT NULL,
   telefono_padre   varchar(15)  NOT NULL DEFAULT '',
   cantidad         integer      NOT NULL DEFAULT 24,
+  lapices_hojas    integer      NOT NULL DEFAULT 0,
   estado           varchar(20)  NOT NULL DEFAULT 'pendiente',
   created_at       timestamptz  NOT NULL DEFAULT now()
 );

@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase, UNIDADES_EDUCATIVAS_DEFAULT } from "@/lib/supabase";
@@ -31,6 +33,7 @@ export default function Home() {
   const [categoria, setCategoria] = useState<Categoria | "">("");
   const [templateId, setTemplateId] = useState("");
   const [cantidad, setCantidad] = useState(1);
+  const [lapicesHojas, setLapicesHojas] = useState(0);
 
   const unidadFinal = mostrarNueva ? unidadNueva : unidad;
   const templatesFiltrados = TEMPLATES.filter(t => t.categoria === categoria);
@@ -65,6 +68,7 @@ export default function Home() {
       template_id:      templateId,
       telefono_padre:   telefonoWA,
       cantidad,
+      lapices_hojas:    lapicesHojas,
       estado:           "pendiente",
     });
 
@@ -269,7 +273,7 @@ export default function Home() {
             </div>
 
             <div>
-              <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Cantidad de etiquetas</label>
+              <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2">Cantidad de etiquetas escolares</label>
               <div className="grid grid-cols-5 gap-2">
                 {CANTIDADES.map(c => (
                   <button key={c} onClick={() => setCantidad(c)}
@@ -279,6 +283,25 @@ export default function Home() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1.5">
+                Etiquetas de lápices / esferos
+                <span className="text-zinc-400 normal-case font-normal ml-1">(6 por hoja)</span>
+              </label>
+              <div className="grid grid-cols-5 gap-2">
+                {[0,1,2,3,4].map(h => (
+                  <button key={h} onClick={() => setLapicesHojas(h)}
+                    className={`py-3 rounded-xl font-black text-sm border-2 transition-all
+                      ${lapicesHojas === h ? "bg-black text-white border-black" : "border-zinc-200 hover:border-zinc-400"}`}>
+                    {h === 0 ? "No" : `${h}h`}
+                  </button>
+                ))}
+              </div>
+              {lapicesHojas > 0 && (
+                <p className="text-[10px] text-zinc-400 font-bold mt-1">{lapicesHojas * 6} etiquetas de lápiz</p>
+              )}
             </div>
 
             {error && <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs font-bold">{error}</div>}
