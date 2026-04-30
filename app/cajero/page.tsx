@@ -56,6 +56,8 @@ export default function CajeroPage() {
   const [imprimiendoLapices, setImprimiendoLapices] = useState(false);
   const [error, setError] = useState("");
   const [exito, setExito] = useState(false);
+  const [cantidadEdit, setCantidadEdit] = useState<number | null>(null);
+  const [lapicesEdit, setLapicesEdit] = useState<number | null>(null);
 
   const template = pedido ? TEMPLATES.find(t => t.id === pedido.template_id) : null;
 
@@ -101,7 +103,7 @@ export default function CajeroPage() {
     const { renderToStaticMarkup } = await import("react-dom/server");
     const svgString = renderToStaticMarkup(<Comp {...datos}/>);
 
-    const paginas = Array.from({ length: pedido.cantidad }, () =>
+    const paginas = Array.from({ length: cantidadFinal }, () =>
       `<div class="pag">${svgString}</div>`
     ).join("");
 
@@ -133,9 +135,7 @@ ${paginas}
     if (!win) { setImprimiendoLapices(false); return; }
 
     const svgLapiz = generarPaginaLapiz(pedido.nombre, pedido.apellido);
-    const hojas = pedido.lapices_hojas || 1;
-
-    const paginas = Array.from({ length: hojas }, () =>
+    const paginas = Array.from({ length: lapicesFinal || 1 }, () =>
       `<div class="pag">${svgLapiz}</div>`
     ).join("");
 
@@ -155,7 +155,9 @@ ${paginas}
     setImprimiendoLapices(false);
   }
 
-  const lapicesHojas = pedido?.lapices_hojas ?? 0;
+  // Cantidades efectivas: usa el valor editado por el cajero o el del pedido
+  const cantidadFinal = cantidadEdit ?? pedido?.cantidad ?? 1;
+  const lapicesFinal  = lapicesEdit  ?? pedido?.lapices_hojas ?? 0;
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white p-6">
@@ -216,14 +218,50 @@ ${paginas}
                 ["Institución", pedido.unidad_educativa],
                 ["Grado",       pedido.grado],
                 ["Modelo",      template.nombre],
-                ["Etiquetas",   `${pedido.cantidad} escolares`],
-                ...(lapicesHojas > 0 ? [["Lápices", `${lapicesHojas} hoja${lapicesHojas > 1 ? "s" : ""} · ${lapicesHojas * 6} etiquetas`]] : []),
               ].map(([k,v]) => (
                 <div key={k} className="flex justify-between">
                   <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{k}</span>
                   <span className="text-xs font-bold text-white">{v}</span>
                 </div>
               ))}
+            </div>
+
+            {/* Ajuste de cantidades por el cajero */}
+            <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-4 space-y-4">
+              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Ajustar cantidades</p>
+
+              <div>
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 block">
+                  Etiquetas escolares
+                  {cantidadEdit !== null && <span className="ml-2 text-yellow-400 normal-case font-normal">modificado</span>}
+                </label>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setCantidadEdit(Math.max(1, cantidadFinal - 1))}
+                    className="w-10 h-10 bg-zinc-800 rounded-xl font-black text-lg flex items-center justify-center hover:bg-zinc-700">−</button>
+                  <span className="flex-1 text-center text-2xl font-black">{cantidadFinal}</span>
+                  <button onClick={() => setCantidadEdit(cantidadFinal + 1)}
+                    className="w-10 h-10 bg-zinc-800 rounded-xl font-black text-lg flex items-center justify-center hover:bg-zinc-700">+</button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 block">
+                  Hojas de lápices <span className="text-zinc-600 normal-case font-normal">(6 etiq. c/u)</span>
+                  {lapicesEdit !== null && <span className="ml-2 text-yellow-400 normal-case font-normal">modificado</span>}
+                </label>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setLapicesEdit(Math.max(0, lapicesFinal - 1))}
+                    className="w-10 h-10 bg-zinc-800 rounded-xl font-black text-lg flex items-center justify-center hover:bg-zinc-700">−</button>
+                  <span className="flex-1 text-center text-2xl font-black">
+                    {lapicesFinal === 0 ? <span className="text-zinc-500 text-sm">Ninguna</span> : lapicesFinal}
+                  </span>
+                  <button onClick={() => setLapicesEdit(lapicesFinal + 1)}
+                    className="w-10 h-10 bg-zinc-800 rounded-xl font-black text-lg flex items-center justify-center hover:bg-zinc-700">+</button>
+                </div>
+                {lapicesFinal > 0 && (
+                  <p className="text-[10px] text-zinc-500 font-bold mt-1 text-center">{lapicesFinal * 6} etiquetas de lápiz</p>
+                )}
+              </div>
             </div>
 
             {exito && (
@@ -236,15 +274,15 @@ ${paginas}
             <button onClick={imprimir} disabled={imprimiendo}
               className="w-full bg-yellow-400 text-black py-4 rounded-2xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-40 border-2 border-yellow-500 shadow-[4px_4px_0px_rgba(255,215,0,0.3)]">
               {imprimiendo ? <Loader2 size={18} className="animate-spin"/> : <Printer size={18}/>}
-              {imprimiendo ? "Preparando..." : `Imprimir ${pedido.cantidad} etiquetas`}
+              {imprimiendo ? "Preparando..." : `Imprimir ${cantidadFinal} etiqueta${cantidadFinal !== 1 ? "s" : ""}`}
             </button>
 
             {/* Botón etiquetas de lápices */}
-            {lapicesHojas > 0 && (
+            {lapicesFinal > 0 && (
               <button onClick={imprimirLapices} disabled={imprimiendoLapices}
                 className="w-full bg-zinc-800 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-40 border-2 border-zinc-600">
                 {imprimiendoLapices ? <Loader2 size={18} className="animate-spin"/> : <PenLine size={18}/>}
-                {imprimiendoLapices ? "Preparando..." : `Imprimir ${lapicesHojas * 6} etiquetas de lápiz`}
+                {imprimiendoLapices ? "Preparando..." : `Imprimir ${lapicesFinal * 6} etiquetas de lápiz`}
               </button>
             )}
           </div>
