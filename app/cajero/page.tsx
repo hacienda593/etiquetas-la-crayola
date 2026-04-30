@@ -26,51 +26,62 @@ type Pedido = {
 // Genera una página 50×25mm con etiquetas de lápiz:
 // 5 franjas horizontales (texto horizontal, sin negritas) +
 // 1 franja vertical a la derecha (2 líneas rotadas) — igual al modelo Excel
-function generarPaginaLapiz(nombre: string, apellido: string): string {
+function generarPaginaLapiz(nombre: string, apellido: string, grado: string): string {
   const p1 = nombre.split(" ")[0].toUpperCase();
   const p2 = apellido.split(" ")[0].toUpperCase();
   const texto = `${p1} ${p2}`;
+  // Grado abreviado: máx 12 chars para que quepa en la franja
+  const gradoTx = grado.toUpperCase().slice(0, 14);
 
-  // Zona horizontal: 340px de ancho × 200px de alto → 5 franjas de 40px
-  const MAIN_W  = 340;
-  const SIDE_W  = 60;   // franja vertical derecha
-  const STRIP_H = 40;   // 200 / 5
+  const MAIN_W  = 330;
+  const SIDE_W  = 70;
+  const STRIP_H = 40;  // 200 / 5
 
-  // Fuente dinámica para que quepa en 340px de ancho
-  const fz = texto.length > 16 ? 13
-           : texto.length > 13 ? 15
-           : texto.length > 10 ? 17
-           : 19;
+  // Fuente dinámica nombre — negrita
+  const fz = texto.length > 16 ? 14
+           : texto.length > 13 ? 16
+           : texto.length > 10 ? 18
+           : 20;
 
-  // 5 franjas horizontales
+  // Fuente combinada: si el texto+grado cabe en 1 línea, lo ponemos junto
+  const lineaCombinada = `${texto}  ${gradoTx}`;
+  const fzC = lineaCombinada.length > 22 ? 13
+            : lineaCombinada.length > 18 ? 15
+            : lineaCombinada.length > 14 ? 17
+            : 19;
+
+  // 5 franjas horizontales — nombre y grado en una sola línea
   const franjas = Array.from({ length: 5 }, (_, i) => {
     const y  = i * STRIP_H;
     const cy = y + STRIP_H / 2;
     return `
       ${i > 0 ? `<line x1="0" y1="${y}" x2="${MAIN_W}" y2="${y}" stroke="black" stroke-width="0.7" stroke-dasharray="5 3"/>` : ""}
       <text x="${MAIN_W / 2}" y="${cy}"
-        font-size="${fz}" font-weight="400"
         font-family="Arial, sans-serif"
         fill="black" text-anchor="middle" dominant-baseline="middle">
-        ${texto}
+        <tspan font-size="${fzC}" font-weight="700">${texto}</tspan><tspan font-size="${fzC - 3}" font-weight="400" fill="#444">  ${gradoTx}</tspan>
       </text>`;
   }).join("");
 
   // Separador vertical
   const sep = `<line x1="${MAIN_W}" y1="0" x2="${MAIN_W}" y2="200" stroke="black" stroke-width="0.7" stroke-dasharray="5 3"/>`;
 
-  // Franja vertical derecha — 2 líneas rotadas -90°
+  // Franja vertical derecha — nombre + grado rotados -90°
   const cx  = MAIN_W + SIDE_W / 2;
-  const fzV = Math.max(p1.length, p2.length) > 9 ? 11 : 13;
+  const fzV = Math.max(p1.length, p2.length) > 9 ? 12 : 14;
   const vertical = `
-    <text x="${cx}" y="68"
-      font-size="${fzV}" font-weight="400" font-family="Arial, sans-serif"
+    <text x="${cx}" y="52"
+      font-size="${fzV}" font-weight="700" font-family="Arial, sans-serif"
       fill="black" text-anchor="middle" dominant-baseline="middle"
-      transform="rotate(-90 ${cx} 68)">${p1}</text>
-    <text x="${cx}" y="140"
-      font-size="${fzV}" font-weight="400" font-family="Arial, sans-serif"
+      transform="rotate(-90 ${cx} 52)">${p1}</text>
+    <text x="${cx}" y="104"
+      font-size="${fzV}" font-weight="700" font-family="Arial, sans-serif"
       fill="black" text-anchor="middle" dominant-baseline="middle"
-      transform="rotate(-90 ${cx} 140)">${p2}</text>`;
+      transform="rotate(-90 ${cx} 104)">${p2}</text>
+    <text x="${cx}" y="158"
+      font-size="10" font-weight="400" font-family="Arial, sans-serif"
+      fill="#333" text-anchor="middle" dominant-baseline="middle"
+      transform="rotate(-90 ${cx} 158)">${gradoTx}</text>`;
 
   return `<svg width="400" height="200" viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
     <rect width="400" height="200" fill="white"/>
@@ -166,7 +177,7 @@ ${paginas}
     const win = window.open("", "_blank", "width=800,height=600");
     if (!win) { setImprimiendoLapices(false); return; }
 
-    const svgLapiz = generarPaginaLapiz(pedido.nombre, pedido.apellido);
+    const svgLapiz = generarPaginaLapiz(pedido.nombre, pedido.apellido, pedido.grado);
     const paginas = Array.from({ length: lapicesFinal || 1 }, () =>
       `<div class="pag">${svgLapiz}</div>`
     ).join("");
