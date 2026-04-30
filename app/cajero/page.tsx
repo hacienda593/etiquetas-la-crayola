@@ -37,12 +37,12 @@ function generarPaginaLapiz(nombre: string, apellido: string, grado: string): st
   const SIDE_W  = 70;
   const STRIP_H = 40;  // 200 / 5
 
-  // Fuente combinada: si el texto+grado cabe en 1 línea, lo ponemos junto
+  // Fuente combinada: nombre + grado en 1 línea
   const lineaCombinada = `${texto}  ${gradoTx}`;
-  const fzC = lineaCombinada.length > 22 ? 13
-            : lineaCombinada.length > 18 ? 15
-            : lineaCombinada.length > 14 ? 17
-            : 19;
+  const fzC = lineaCombinada.length > 22 ? 15
+            : lineaCombinada.length > 18 ? 17
+            : lineaCombinada.length > 14 ? 20
+            : 22;
 
   // 5 franjas horizontales — nombre y grado en una sola línea
   const franjas = Array.from({ length: 5 }, (_, i) => {
@@ -53,29 +53,25 @@ function generarPaginaLapiz(nombre: string, apellido: string, grado: string): st
       <text x="${MAIN_W / 2}" y="${cy}"
         font-family="Arial, sans-serif"
         fill="black" text-anchor="middle" dominant-baseline="middle">
-        <tspan font-size="${fzC}" font-weight="700">${texto}</tspan><tspan font-size="${fzC - 3}" font-weight="400" fill="#444">  ${gradoTx}</tspan>
+        <tspan font-size="${fzC}" font-weight="700">${texto}</tspan><tspan font-size="${fzC - 4}" font-weight="400" fill="#444">  ${gradoTx}</tspan>
       </text>`;
   }).join("");
 
   // Separador vertical
   const sep = `<line x1="${MAIN_W}" y1="0" x2="${MAIN_W}" y2="200" stroke="black" stroke-width="0.7" stroke-dasharray="5 3"/>`;
 
-  // Franja vertical derecha — nombre + grado rotados -90°
+  // Franja vertical derecha — nombre en línea 1, grado en línea 2
   const cx  = MAIN_W + SIDE_W / 2;
-  const fzV = Math.max(p1.length, p2.length) > 9 ? 12 : 14;
+  const fzV = texto.length > 14 ? 11 : texto.length > 10 ? 13 : 15;
   const vertical = `
-    <text x="${cx}" y="52"
+    <text x="${cx}" y="70"
       font-size="${fzV}" font-weight="700" font-family="Arial, sans-serif"
       fill="black" text-anchor="middle" dominant-baseline="middle"
-      transform="rotate(-90 ${cx} 52)">${p1}</text>
-    <text x="${cx}" y="104"
-      font-size="${fzV}" font-weight="700" font-family="Arial, sans-serif"
-      fill="black" text-anchor="middle" dominant-baseline="middle"
-      transform="rotate(-90 ${cx} 104)">${p2}</text>
-    <text x="${cx}" y="158"
-      font-size="10" font-weight="400" font-family="Arial, sans-serif"
+      transform="rotate(-90 ${cx} 70)">${texto}</text>
+    <text x="${cx}" y="148"
+      font-size="11" font-weight="400" font-family="Arial, sans-serif"
       fill="#333" text-anchor="middle" dominant-baseline="middle"
-      transform="rotate(-90 ${cx} 158)">${gradoTx}</text>`;
+      transform="rotate(-90 ${cx} 148)">${gradoTx}</text>`;
 
   return `<svg width="400" height="200" viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
     <rect width="400" height="200" fill="white"/>
