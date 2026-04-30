@@ -37,12 +37,6 @@ function generarPaginaLapiz(nombre: string, apellido: string, grado: string): st
   const SIDE_W  = 70;
   const STRIP_H = 40;  // 200 / 5
 
-  // Fuente dinámica nombre — negrita
-  const fz = texto.length > 16 ? 14
-           : texto.length > 13 ? 16
-           : texto.length > 10 ? 18
-           : 20;
-
   // Fuente combinada: si el texto+grado cabe en 1 línea, lo ponemos junto
   const lineaCombinada = `${texto}  ${gradoTx}`;
   const fzC = lineaCombinada.length > 22 ? 13
