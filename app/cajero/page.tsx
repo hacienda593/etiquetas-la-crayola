@@ -23,28 +23,38 @@ type Pedido = {
   created_at: string;
 };
 
-// Genera una página 50×25mm con 6 tiras de lápiz para el nombre dado
+// Genera una página 50×25mm con 6 tiras de lápiz
+// Usa solo el PRIMER nombre y el PRIMER apellido para que quepa en cada tira
 function generarPaginaLapiz(nombre: string, apellido: string): string {
-  const nombreCompleto = `${nombre} ${apellido}`.toUpperCase();
-  // 6 tiras de ~66.7px de ancho en SVG 400×200
+  const primerNombre   = nombre.split(" ")[0];
+  const primerApellido = apellido.split(" ")[0];
+  const texto = `${primerNombre} ${primerApellido}`.toUpperCase();
+
+  // Fuente dinámica: el texto rotado corre a lo largo de 200px (altura SVG)
+  // Cada carácter ocupa ~0.6× el fontSize en px
+  const fz = texto.length > 16 ? 13
+           : texto.length > 13 ? 15
+           : texto.length > 10 ? 18
+           : 22;
+
+  const STRIP_W = 400 / 6; // ~66.7px por tira
+
   const tiras = Array.from({ length: 6 }, (_, i) => {
-    const x = i * 66.7 + 33.3; // centro de cada tira
+    const cx = i * STRIP_W + STRIP_W / 2;
     return `
-      <line x1="${i * 66.7}" y1="0" x2="${i * 66.7}" y2="200"
-        stroke="black" stroke-width="1" stroke-dasharray="6 4" opacity="0.5"/>
-      <text x="${x}" y="100"
-        font-size="22" font-weight="900" font-family="Arial Black, Arial, sans-serif"
+      ${i > 0 ? `<line x1="${i * STRIP_W}" y1="2" x2="${i * STRIP_W}" y2="198" stroke="black" stroke-width="0.8" stroke-dasharray="5 3"/>` : ""}
+      <text x="${cx}" y="100"
+        font-size="${fz}" font-weight="900"
+        font-family="Arial Black, Arial, sans-serif"
         fill="black" text-anchor="middle" dominant-baseline="middle"
-        transform="rotate(-90, ${x}, 100)">
-        ${nombreCompleto}
+        transform="rotate(-90 ${cx} 100)">
+        ${texto}
       </text>`;
   }).join("");
 
-  return `<svg width="400" height="200" viewBox="0 0 400 200"
-    xmlns="http://www.w3.org/2000/svg">
+  return `<svg width="400" height="200" viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
     <rect width="400" height="200" fill="white"/>
     ${tiras}
-    <line x1="399" y1="0" x2="399" y2="200" stroke="black" stroke-width="1" stroke-dasharray="6 4" opacity="0.5"/>
   </svg>`;
 }
 
